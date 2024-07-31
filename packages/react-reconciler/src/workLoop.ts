@@ -23,6 +23,7 @@ function renderRoot(root: FiberRootNode) {
 			}
 			workInProgress = null;
 		}
+	// eslint-disable-next-line no-constant-condition
 	} while (true);
 
 	const finishedWork = root.current.alternate;

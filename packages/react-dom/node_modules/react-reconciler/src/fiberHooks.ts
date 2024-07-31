@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import internals from 'shared/internals';
 import { FiberNode } from './fiber';
 import { Dispatcher } from 'react/src/currentDispatcher';

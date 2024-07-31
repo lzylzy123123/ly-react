@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { REACT_ELEMENT_TYPE } from '../../shared/reactSymbols';
 import {
 	Key,

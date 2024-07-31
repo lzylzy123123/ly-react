@@ -9,7 +9,7 @@ import { FunctionComponent, HostComponent, HostRoot, HostText } from './workTags
 import { NoFlags } from './fiberFlags';
 
 export const completeWork = (wip: FiberNode) => {
-	const newProps = wip.pendingProps;
+	// const newProps = wip.pendingProps;
 	const current = wip.alternate;
 
 	switch (wip.tag) {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export type Type = any;
 export type Key = any;
 export type Ref = any;
