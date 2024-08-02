@@ -26,11 +26,15 @@ const ReactElement = function (
 	return element;
 };
 
-export function jsx(
-	type: ElementType,
-	config: any,
-	...maybeChildren: any
-): ReactElementType {
+export function isValidElement(object: any) {
+	return (
+		typeof object === 'object' &&
+		object !== null &&
+		object.$$typeof === REACT_ELEMENT_TYPE
+	);
+}
+
+export const jsx = (type: ElementType, config: any, ...maybeChildren: any) => {
 	let key: Key = null;
 	const props: Props = {};
 	let ref: Ref = null;
@@ -54,13 +58,15 @@ export function jsx(
 		}
 	}
 	const maybeChildrenLength = maybeChildren.length;
-	if (maybeChildrenLength === 1) {
-		props.children = maybeChildren[0];
-	} else {
-		props.children = maybeChildren;
+	if (maybeChildrenLength) {
+		if (maybeChildrenLength === 1) {
+			props.children = maybeChildren[0];
+		} else {
+			props.children = maybeChildren;
+		}
 	}
 	return ReactElement(type, key, ref, props);
-}
+};
 
 export function jsxDEV(type: ElementType, config: any): ReactElementType {
 	let key: Key = null;
