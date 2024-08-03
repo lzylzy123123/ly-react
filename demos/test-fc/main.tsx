@@ -1,15 +1,10 @@
-import { useState } from 'react'
-import ReactDOM from 'react-dom/client'
+import { useState } from 'react';
+import ReactDOM from 'react-dom/client';
 
 const App = function () {
-  const [num] = useState(5000);
-  return (
-    <div>
-      <span>{num}</span>
-    </div>
-  );
+	const [num, setNum] = useState(5000);
+	window.setNum = setNum;
+	return num === 3 ? <div>react</div> : <div>{num}</div>;
 };
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <App/>
-)
+ReactDOM.createRoot(document.getElementById('root')!).render(<App />);

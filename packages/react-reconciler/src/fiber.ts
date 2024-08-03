@@ -20,6 +20,7 @@ export class FiberNode {
 	flags: Flags;
 	subTreeFlags: Flags;
 	updateQueue: unknown;
+	deletions: FiberNode[] | null;
 	constructor(tag: WorkTag, pendingProps: Props, key: Key) {
 		this.tag = tag;
 		this.key = key;
@@ -37,6 +38,7 @@ export class FiberNode {
 		this.updateQueue = null;
 		this.memorizedState = null;
 		this.alternate = null;
+    this.deletions = null;
 	}
 }
 
@@ -63,6 +65,7 @@ export const createWorkingProgress = (
 		wip.alternate = current;
 		current.alternate = wip;
 	} else {
+    wip.deletions = null;
 		wip.flags = NoFlags;
 		wip.subTreeFlags = NoFlags;
 		wip.pendingProps = pendingProps;
