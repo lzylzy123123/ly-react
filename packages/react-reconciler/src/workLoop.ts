@@ -80,6 +80,7 @@ function completeUnitOfWork(fiber: FiberNode) {
 		workInProgress = node;
 	} while (node !== null);
 }
+
 export function scheduledUpdateOnFiber(fiber: FiberNode) {
 	const root = markUpdateFromFiberToRoot(fiber);
 	renderRoot(root);
