@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { REACT_ELEMENT_TYPE } from '../../shared/reactSymbols';
+import { REACT_ELEMENT_TYPE, REACT_FRAGMENT_TYPE } from '../../shared/reactSymbols';
 import {
 	Key,
 	Props,
@@ -67,6 +67,8 @@ export const jsx = (type: ElementType, config: any, ...maybeChildren: any) => {
 	}
 	return ReactElement(type, key, ref, props);
 };
+
+export const Fragment = REACT_FRAGMENT_TYPE;
 
 export function jsxDEV(type: ElementType, config: any): ReactElementType {
 	let key: Key = null;

@@ -1,11 +1,12 @@
-import { Props, ReactElementType } from 'shared/reactTypes';
+import { Key, Props, ReactElementType } from 'shared/reactTypes';
 import {
 	FiberNode,
 	createFiberFromElement,
+	createFiberFromFragment,
 	createWorkingProgress
 } from './fiber';
-import { REACT_ELEMENT_TYPE } from 'shared/reactSymbols';
-import { HostText } from './workTags';
+import { REACT_ELEMENT_TYPE, REACT_FRAGMENT_TYPE } from 'shared/reactSymbols';
+import { Fragment, HostText } from './workTags';
 import { ChildDeletion, Placement } from './fiberFlags';
 
 type ExistingChildren = Map<string | number, FiberNode>;
@@ -47,7 +48,11 @@ function ChildReconciler(shouldTrackEffects: boolean) {
 			if (currentFiber.key === key) {
 				if (element.$$typeof === REACT_ELEMENT_TYPE) {
 					if (currentFiber.type === element.type) {
-						const existing = useFiber(currentFiber, element.props);
+						let props = element.props;
+						if (element.type === REACT_FRAGMENT_TYPE) {
+							props = element.props.children;
+						}
+						const existing = useFiber(currentFiber, props);
 						existing.return = returnFiber;
 						deleteRemainingChildren(returnFiber, currentFiber.sibling);
 						return existing;
@@ -65,7 +70,12 @@ function ChildReconciler(shouldTrackEffects: boolean) {
 				currentFiber = currentFiber.sibling;
 			}
 		}
-		const fiber = createFiberFromElement(element);
+		let fiber;
+		if (element.type === REACT_FRAGMENT_TYPE) {
+			fiber = createFiberFromFragment(element.props.children, key);
+		} else {
+			fiber = createFiberFromElement(element);
+		}
 		fiber.return = returnFiber;
 		return fiber;
 	}
@@ -189,6 +199,15 @@ function ChildReconciler(shouldTrackEffects: boolean) {
 		if (typeof element === 'object' && element !== null) {
 			switch (element.$$typeof) {
 				case REACT_ELEMENT_TYPE:
+					if (element.type === REACT_FRAGMENT_TYPE) {
+						return updateFragment(
+							returnFiber,
+							before,
+							element,
+							keyToUse,
+							existingChildren
+						);
+					}
 					if (before) {
 						if (before.type === element.type) {
 							existingChildren.delete(keyToUse);
@@ -203,15 +222,57 @@ function ChildReconciler(shouldTrackEffects: boolean) {
 				return null;
 			}
 		}
+
+		if (Array.isArray(element)) {
+			return updateFragment(
+				returnFiber,
+				before,
+				element,
+				keyToUse,
+				existingChildren
+			);
+		}
 		return null;
+	}
+
+	function updateFragment(
+		returnFiber: FiberNode,
+		current: FiberNode | undefined,
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		element: any[],
+		key: Key,
+		existingChildren: ExistingChildren
+	) {
+		let fiber;
+		if (!current || current.tag !== Fragment) {
+			fiber = createFiberFromFragment(element, key);
+		} else {
+			existingChildren.delete(key);
+			fiber = useFiber(current, element);
+		}
+		fiber.return = returnFiber;
+		return fiber;
 	}
 
 	return function reconcilerChildFibers(
 		returnFiber: FiberNode,
 		currentFiber: FiberNode | null,
-		newChild?: ReactElementType
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		newChild?: any
 	) {
+		const isUnkeyedTopLevelFragment =
+			typeof newChild === 'object' &&
+			newChild !== null &&
+			newChild.type === REACT_FRAGMENT_TYPE &&
+			newChild.key === null;
+
+		if (isUnkeyedTopLevelFragment) {
+			newChild = newChild.props.children;
+		}
 		if (typeof newChild === 'object' && newChild !== null) {
+			if (Array.isArray(newChild)) {
+				return reconcileChildrenArray(returnFiber, currentFiber, newChild);
+			}
 			switch (newChild.$$typeof) {
 				case REACT_ELEMENT_TYPE:
 					return placeSingleChild(
@@ -223,9 +284,6 @@ function ChildReconciler(shouldTrackEffects: boolean) {
 					}
 					break;
 			}
-			if (Array.isArray(newChild)) {
-				return reconcileChildrenArray(returnFiber, currentFiber, newChild);
-			}
 		}
 
 		if (typeof newChild === 'string' || typeof newChild === 'number') {
@@ -235,7 +293,7 @@ function ChildReconciler(shouldTrackEffects: boolean) {
 		}
 
 		if (currentFiber !== null) {
-			deleteChild(returnFiber, currentFiber);
+			deleteRemainingChildren(returnFiber, currentFiber);
 		}
 
 		if (__DEV__) {
