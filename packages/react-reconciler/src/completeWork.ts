@@ -73,7 +73,7 @@ function appendAllChildren(parent: Container, wip: FiberNode) {
 		if (node === wip) {
 			return;
 		}
-		if (node.sibling === null) {
+		while (node.sibling === null) {
 			if (node.return === null || node.return === wip) {
 				return;
 			}
