@@ -217,10 +217,6 @@ function ChildReconciler(shouldTrackEffects: boolean) {
 					return createFiberFromElement(element);
 			}
 
-			if (Array.isArray(element) && __DEV__) {
-				console.warn('还未实现数组类型的child');
-				return null;
-			}
 		}
 
 		if (Array.isArray(element)) {
