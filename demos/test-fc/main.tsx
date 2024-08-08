@@ -9,10 +9,14 @@ const App = function () {
 			? [<li key="1">1</li>, <li key="2">2</li>, <li key="3">3</li>]
 			: [<li key="3">3</li>, <li key="2">2</li>, <li key="1">1</li>];
 	return (
-		<ul onClick={() => setNum(num + 1)}>
-			<li>4</li>
-			<li>5</li>
-			{arr}
+		<ul
+			onClick={() => {
+				setNum((num) => num + 1);
+				setNum((num) => num + 1);
+				setNum((num) => num + 1);
+			}}
+		>
+			{num}
 		</ul>
 	);
 };

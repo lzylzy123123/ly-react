@@ -8,6 +8,7 @@ import {
 } from './workTags';
 import { Flags, NoFlags } from './fiberFlags';
 import { Container } from 'hostConfig';
+import { Lane, Lanes, NoLane, NoLanes } from './fiberLanes';
 export class FiberNode {
 	type: any;
 	tag: WorkTag;
@@ -51,11 +52,15 @@ export class FiberRootNode {
 	container: Container;
 	current: FiberNode;
 	finishedWork: FiberNode | null;
+  pendingLanes:Lanes;
+  finishedLane:Lane;
 	constructor(container: Container, hostRootFiber: FiberNode) {
 		this.current = hostRootFiber;
 		this.container = container;
 		hostRootFiber.stateNode = this;
 		this.finishedWork = null;
+    this.pendingLanes = NoLanes;
+    this.finishedLane = NoLane;
 	}
 }
 

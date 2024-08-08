@@ -1,17 +1,38 @@
+import { scheduleMicroTask } from 'hostConfig';
 import { beginWork } from './beginWork';
 import { commitMutationEffects } from './commitWork';
 import { completeWork } from './completeWork';
 import { FiberNode, FiberRootNode, createWorkingProgress } from './fiber';
 import { MutationMask, NoFlags } from './fiberFlags';
+import {
+	getHighestPriorityLane,
+	Lane,
+	markRootFinished,
+	mergeLanes,
+	NoLane,
+	SyncLane
+} from './fiberLanes';
+import { flushSyncCallbacks, scheduleSyncCallback } from './syncTaskQueue';
 import { HostRoot } from './workTags';
 
 let workInProgress: FiberNode | null;
-
-function prepareFreshStack(root: FiberRootNode) {
+let wipRootRenderLane: Lane = NoLane;
+function prepareFreshStack(root: FiberRootNode, lane: Lane) {
 	workInProgress = createWorkingProgress(root.current, {});
+	wipRootRenderLane = lane;
 }
-function renderRoot(root: FiberRootNode) {
-	prepareFreshStack(root);
+function performSyncWorkOnRoot(root: FiberRootNode, lane: Lane) {
+	const nextLane = getHighestPriorityLane(root.pendingLanes);
+	if (nextLane !== SyncLane) {
+		ensureRootIsScheduled(root);
+		return;
+	}
+
+  if(__DEV__){
+    console.warn('render阶段开始');
+  }
+
+	prepareFreshStack(root, lane);
 
 	do {
 		try {
@@ -23,11 +44,14 @@ function renderRoot(root: FiberRootNode) {
 			}
 			workInProgress = null;
 		}
-	// eslint-disable-next-line no-constant-condition
+		// eslint-disable-next-line no-constant-condition
 	} while (true);
 
 	const finishedWork = root.current.alternate;
 	root.finishedWork = finishedWork;
+	root.finishedLane = lane;
+	wipRootRenderLane = NoLane;
+
 	commitRoot(root);
 }
 
@@ -40,7 +64,15 @@ function commitRoot(root: FiberRootNode) {
 	if (__DEV__) {
 		console.warn('commit阶段开始', finishedWork);
 	}
+
+	const lane = root.finishedLane;
+	if (lane === NoLane && __DEV__) {
+		console.error('commit阶段finishedLane不应该是NoLane');
+	}
 	root.finishedWork = null;
+	root.finishedLane = NoLane;
+
+  markRootFinished(root,lane);
 
 	const subTreeHasEffect =
 		(finishedWork.subTreeFlags & MutationMask) !== NoFlags;
@@ -59,7 +91,7 @@ function workLoop() {
 	}
 }
 function performUnitOfWork(fiber: FiberNode) {
-	const next = beginWork(fiber);
+	const next = beginWork(fiber, wipRootRenderLane);
 	fiber.memorizedProps = fiber.pendingProps;
 	if (next === null) {
 		completeUnitOfWork(fiber);
@@ -81,9 +113,28 @@ function completeUnitOfWork(fiber: FiberNode) {
 	} while (node !== null);
 }
 
-export function scheduledUpdateOnFiber(fiber: FiberNode) {
+export function scheduledUpdateOnFiber(fiber: FiberNode, lane: Lane) {
 	const root = markUpdateFromFiberToRoot(fiber);
-	renderRoot(root);
+	markRootUpdate(root, lane);
+	ensureRootIsScheduled(root);
+}
+
+function ensureRootIsScheduled(root: FiberRootNode) {
+	const updateLane = getHighestPriorityLane(root.pendingLanes);
+	if (updateLane === NoLane) {
+		return;
+	}
+	if (updateLane === SyncLane) {
+		if (__DEV__) {
+			console.log('在微任务中调度，优先级：', updateLane);
+		}
+		scheduleSyncCallback(performSyncWorkOnRoot.bind(null, root, updateLane));
+		scheduleMicroTask(flushSyncCallbacks);
+	}
+}
+
+function markRootUpdate(root: FiberRootNode, lane: Lane) {
+	root.pendingLanes = mergeLanes(root.pendingLanes, lane);
 }
 
 function markUpdateFromFiberToRoot(fiber: FiberNode) {
