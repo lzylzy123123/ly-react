@@ -19,7 +19,7 @@ export default [
 				format: 'umd'
 			}
 		],
-		external: [...Object.keys(peerDependencies)],
+		external: [...Object.keys(peerDependencies),'scheduler'],
 		plugins: [
 			...getBaseRollupPlugins(),
 			alias({
