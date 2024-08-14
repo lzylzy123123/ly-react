@@ -8,7 +8,7 @@
  * @jest-environment node
  */
 
-/* eslint-disable no-func-assign */
+/* eslint-disable */
 
 'use strict';
 
