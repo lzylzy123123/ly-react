@@ -4,6 +4,7 @@ import { FiberNode } from './fiber';
 import { Dispatcher } from 'react/src/currentDispatcher';
 import { Dispatch } from 'react/src/currentDispatcher';
 import {
+	Update,
 	UpdateQueue,
 	createUpdate,
 	createUpdateQueue,
@@ -26,6 +27,8 @@ interface Hook {
 	memorizedState: any;
 	updateQueue: unknown;
 	next: Hook | null;
+	baseState: any;
+	baseQueue: Update<any> | null;
 }
 
 export interface Effect {
@@ -169,16 +172,34 @@ function createFCUpdateQueue<State>() {
 function updateState<State>(): [State, Dispatch<State>] {
 	const hook = updateWorkInProgressHook();
 	const queue = hook.updateQueue as UpdateQueue<State>;
+	const baseState = hook.baseState;
+
 	const pending = queue.shared.pending;
-	queue.shared.pending = null;
+	const current = currentHook as Hook;
+	let baseQueue = current.baseQueue;
 
 	if (pending !== null) {
-		const { memorizedState } = processUpdateQueue(
-			hook.memorizedState,
-			pending,
-			renderLane
-		);
-		hook.memorizedState = memorizedState;
+		if (baseQueue !== null) {
+			const baseFirst = baseQueue.next;
+			const pendingFirst = pending.next;
+
+			baseQueue.next = pendingFirst;
+			pending.next = baseFirst;
+		}
+		baseQueue = pending;
+		current.baseQueue = pending;
+		queue.shared.pending = null;
+
+		if (baseQueue !== null) {
+			const {
+				memorizedState,
+				baseQueue: newbaseQueue,
+				baseState: newbaseState
+			} = processUpdateQueue(baseState, baseQueue, renderLane);
+			hook.memorizedState = memorizedState;
+			hook.baseState = newbaseState;
+			hook.baseQueue = newbaseQueue;
+		}
 	}
 	return [hook.memorizedState, queue.dispatch as Dispatch<State>];
 }
@@ -206,7 +227,9 @@ function updateWorkInProgressHook(): Hook {
 	const newHook = {
 		memorizedState: currentHook.memorizedState,
 		updateQueue: currentHook.updateQueue,
-		next: null
+		next: null,
+		baseQueue: currentHook.baseQueue,
+		baseState: currentHook.baseState
 	};
 
 	if (workInProgressHook === null) {
@@ -237,7 +260,11 @@ function mountState<State>(
 	hook.updateQueue = queue;
 	hook.memorizedState = memorizedState;
 
-	const dispatch = dispatchSetState.bind(null, currentlyRenderingFiber as FiberNode, queue as any);
+	const dispatch = dispatchSetState.bind(
+		null,
+		currentlyRenderingFiber as FiberNode,
+		queue as any
+	);
 	queue.dispatch = dispatch;
 	return [memorizedState, dispatch];
 }
@@ -256,7 +283,9 @@ function mountWorkInProgressHook(): Hook {
 	const hook: Hook = {
 		memorizedState: null,
 		updateQueue: null,
-		next: null
+		next: null,
+		baseQueue: null,
+		baseState: null
 	};
 	if (workInProgressHook === null) {
 		if (currentlyRenderingFiber === null) {
